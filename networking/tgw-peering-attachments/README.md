@@ -1,49 +1,45 @@
-<!-- BEGIN_TF_DOCS -->
-# Terraform Module for - tgw-vpc-attachment
-This module creates an AWS Transit Gateway VPC attachment with dedicated, high-availability subnets: one per Availability Zone (AZ).
-The module expects that you already have a dedicated /28 subnets in your VPC—one in each Availability Zone (AZ). You must provide the IDs of these subnets (keyed by AZ) along with an ordered list of AZs. The module then uses these subnets for a HA Transit Gateway attachment.
+# Transit Gateway Peering Attachments
 
-# Example terragrunt.hcl - inputs
+This Terraform module creates Transit Gateway (TGW) peering attachments from a **central hub TGW** to:
+
+- `central_tgw` (same or different account)
+- `prod_hub_tgw`
+- `notprod_hub_tgw`
+
+It supports both **same-account** and **cross-account** TGW peering within the same region.
+
+## 📍 Prerequisites
+
+- All TGWs must be in the same AWS region (`eu-west-2`)
+- Cross-account peering requires the **peer account to accept the attachment** via `aws_ec2_transit_gateway_peering_attachment_accepter`
+- Appropriate IAM permissions to create and accept TGW peering attachments
+
+## 🧾 Terraform Inputs
+
+| Name                | Type   | Description                                      | Example                        |
+|---------------------|--------|--------------------------------------------------|--------------------------------|
+| `central_hub_tgw_id`| string | The ID of the central hub TGW initiating peering | `"tgw-0abc..."`                |
+| `central_tgw_id`    | string | The ID of the other central TGW                  | `"tgw-0def..."`                |
+| `prod_hub_tgw_id`   | string | The ID of the prod TGW                           | `"tgw-0abc..."`                |
+| `prod_account_id`   | string | AWS Account ID of the prod TGW                   | `"123456789012"`               |
+| `notprod_hub_tgw_id`| string | The ID of the notprod TGW                        | `"tgw-0xyz..."`                |
+| `notprod_account_id`| string | AWS Account ID of the notprod TGW                | `"123456789012"`               |
+| `region`            | string | AWS Region where TGWs are located                | `"eu-west-2"`                  |
+
+## 🏗️ Resources Created
+
+- `aws_ec2_transit_gateway_peering_attachment.to_central_tgw`
+- `aws_ec2_transit_gateway_peering_attachment.to_prod_hub`
+- `aws_ec2_transit_gateway_peering_attachment.to_notprod_hub`
+
+## 🔁 Accepting TGW Peering Attachments
+
+To complete the peering setup, you must accept the attachment in each **peer account** using the following resource:
+
 ```hcl
-inputs = {
-transit_gateway_id = "tgw-0123456789abcdef0"
-vpc_id             = "vpc-0123456789abcdef0"
-azs              = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
-
-attachment_subnet_ids = {
-  "eu-west-2a" = "cc-vpn-prod-tgwattach-a"
-  "eu-west-2b" = "cc-vpn-prod-tgwattach-b"
-  "eu-west-2c" = "cc-vpn-prod-tgwattach-c"
+resource "aws_ec2_transit_gateway_peering_attachment_accepter" "accept_from_central" {
+  transit_gateway_attachment_id = "<peering_attachment_id>"
+  tags = {
+    Name = "accept-from-central"
+  }
 }
-}
-appliance_mode_support = false
-
-```
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
-## Requirements
-
-No requirements.
-## Resources
-
-| Name | Type |
-|------|------|
-| [aws_ec2_transit_gateway_vpc_attachment.twg_vpc](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_transit_gateway_vpc_attachment) | resource |
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_attachment_subnet_ids"></a> [attachment\_subnet\_ids](#input\_attachment\_subnet\_ids) | A map of dedicated /28 subnet IDs for each AZ. The keys must match the AZ names provided in `azs`. | `map(string)` | n/a | yes |
-| <a name="input_azs"></a> [azs](#input\_azs) | List of Availability Zones for which the dedicated /28 subnets exist. The order of the AZs determines the order of subnets used in the attachment. | `list(string)` | n/a | yes |
-| <a name="input_name"></a> [name](#input\_name) | (Optional) Key-value tags for the EC2 Transit Gateway VPC Attachment. | `string` | n/a | yes |
-| <a name="input_transit_gateway_default_route_table_propagation"></a> [transit\_gateway\_default\_route\_table\_propagation](#input\_transit\_gateway\_default\_route\_table\_propagation) | (Optional) Boolean whether the VPC Attachment should propagate routes with the EC2 Transit Gateway propagation default route table. | `bool` | `true` | no |
-| <a name="input_transit_gateway_id"></a> [transit\_gateway\_id](#input\_transit\_gateway\_id) | The ID of the Transit Gateway. | `string` | n/a | yes |
-| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The ID of the VPC to attach. | `string` | n/a | yes |
-## Outputs
-
-No outputs.
-
-<!-- END_TF_DOCS -->
