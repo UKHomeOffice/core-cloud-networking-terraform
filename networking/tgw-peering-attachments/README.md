@@ -1,38 +1,29 @@
-# Transit Gateway Peering Attachments
+# AWS Transit Gateway Peering Setup (Central Hub Model)
 
-This Terraform module creates Transit Gateway (TGW) peering attachments from a **central hub TGW** to:
+This Terraform module provisions **Transit Gateway peering attachments** between a **central hub TGW** and HUB TGWs in other environments (`prod`, `notprod`, `central`).
 
-- `central_tgw` (same or different account)
-- `prod_hub_tgw`
-- `notprod_hub_tgw`
+---
 
-It supports both **same-account** and **cross-account** TGW peering within the same region.
+##  Features
 
-## 📍 Prerequisites
+- Creates peering attachments from a central TGW to environment-specific TGWs.
+- Handles `central` TGW-to-hub TGW peering logic.
+- Custom `tags` per environment.
+- Outputs peering attachment IDs for use in accepter setup.
 
-- All TGWs must be in the same AWS region (`eu-west-2`)
-- Cross-account peering requires the **peer account to accept the attachment** via `aws_ec2_transit_gateway_peering_attachment_accepter`
-- Appropriate IAM permissions to create and accept TGW peering attachments
+---
 
-## 🧾 Terraform Inputs
+## Inputs
 
-| Name                | Type   | Description                                      | Example                        |
-|---------------------|--------|--------------------------------------------------|--------------------------------|
-| `central_hub_tgw_id`| string | The ID of the central hub TGW initiating peering | `"tgw-0abc..."`                |
-| `central_tgw_id`    | string | The ID of the other central TGW                  | `"tgw-0def..."`                |
-| `prod_hub_tgw_id`   | string | The ID of the prod TGW                           | `"tgw-0abc..."`                |
-| `prod_account_id`   | string | AWS Account ID of the prod TGW                   | `"123456789012"`               |
-| `notprod_hub_tgw_id`| string | The ID of the notprod TGW                        | `"tgw-0xyz..."`                |
-| `notprod_account_id`| string | AWS Account ID of the notprod TGW                | `"123456789012"`               |
-| `region`            | string | AWS Region where TGWs are located                | `"eu-west-2"`                  |
+### `central_hub_tgw_id`
+- **Type**: `string`
+- **Description**: The Transit Gateway ID of the central hub (used as the source for most peerings).
 
-## 🏗️ Resources Created
+### `accounts`
+- **Type**: `map(object)`
+- **Description**: A map of environment accounts and their TGW configurations.
 
-- `aws_ec2_transit_gateway_peering_attachment.to_central_tgw`
-- `aws_ec2_transit_gateway_peering_attachment.to_prod_hub`
-- `aws_ec2_transit_gateway_peering_attachment.to_notprod_hub`
-
-## 🔁 Accepting TGW Peering Attachments
+##  Accepting TGW Peering Attachments
 
 To complete the peering setup, you must accept the attachment in each **peer account** using the following resource:
 
